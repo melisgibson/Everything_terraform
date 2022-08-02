@@ -110,7 +110,7 @@ resource "aws_route_table_association" "public_route_2" {
 resource "aws_security_group" "public_sg" {
   name        = "public_sg"
   description = "Allow web and ssh traffic"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = aws_vpc.vpc.id
 
   ingress {
     from_port        = 80
@@ -136,7 +136,7 @@ resource "aws_security_group" "public_sg" {
 resource "aws_security_group" "private_sg" {
   name        = "private_sg"
   description = "Allow web tier and ssh traffic"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = aws_vpc.vpc.id
 
   ingress {
     from_port        = 3306
@@ -160,15 +160,9 @@ resource "aws_security_group" "private_sg" {
   }
 }
 
-# Specify key pair
-resource "aws_key_pair" "ec2_key_pair" {
-  key_name   = var.ec2_key_name
-  public_key = var.ec2_public_key
-}
-
 # Create ALB
 resource "aws_lb" "project_alb" {
-  name               = "project_alb"
+  name               = "alb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.public_sg.id]
@@ -179,7 +173,7 @@ resource "aws_lb" "project_alb" {
 resource "aws_instance" "web1" {
   ami           = "ami-0cff7528ff583bf9a"
   instance_type = "t2.micro"
-  key_name          = aws_key_pair.ec2_key_pair.key_name
+  key_name          = "MyKey"
   availability_zone = "us-east-1a"
   vpc_security_group_ids      = [aws_security_group.public_sg.id]
   subnet_id                   = aws_subnet.public_1.id
@@ -192,7 +186,7 @@ resource "aws_instance" "web1" {
 resource "aws_instance" "web2" {
   ami           = "ami-0cff7528ff583bf9a"
   instance_type = "t2.micro"
-  key_name          = aws_key_pair.ec2_key_pair.key_name
+  key_name          = "MyKey"
   availability_zone = "us-east-1b"
   vpc_security_group_ids      = [aws_security_group.public_sg.id]
   subnet_id                   = aws_subnet.public_2.id
@@ -206,17 +200,25 @@ output "ec2_public_ip" {
   value = aws_instance.web1.public_ip
 }
 
+# Database subnet group
+resource "aws_db_subnet_group" "db_subnet"  {
+    name       = "db_subnet"
+    subnet_ids = [aws_subnet.private_1.id, aws_subnet.private_2.id]
+}
+
 # Create database instance
-resource "aws_db_instance" "db" {
+resource "aws_db_instance" "db_instance" {
   allocated_storage    = 10
   engine               = "mysql"
   engine_version       = "5.7"
   instance_class       = "db.t3.micro"
-  name                 = "db"
-  username             = var.db_username
-  password             = var.db_password
-  db_subnet_group_name = aws_subnet.private_1.id
+  username             = "admin"
+  password             = "password"
+  db_subnet_group_name = aws_db_subnet_group.db_subnet.id
   vpc_security_group_ids = [aws_security_group.private_sg.id]
   publicly_accessible = false
   skip_final_snapshot  = true
+  tags = {
+    Name = "project_db"
+  }
 }

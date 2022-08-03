@@ -22,11 +22,6 @@ resource "aws_vpc" "vpc" {
   }
 }
 
-# Output
-output "show_vpc" {
-  value = aws_vpc.vpc.arn
-}
-
 # Create internet gateway
 resource "aws_internet_gateway" "ig" {
   vpc_id = aws_vpc.vpc.id
@@ -67,7 +62,7 @@ resource "aws_subnet" "private_1" {
   map_public_ip_on_launch = false
 
   tags = {
-    Name = "private_1"
+    Name = "private-1"
   }
 }
 
@@ -78,7 +73,7 @@ resource "aws_subnet" "private_2" {
   map_public_ip_on_launch = false
 
   tags = {
-    Name = "private_2"
+    Name = "private-2"
   }
 }
 
@@ -108,7 +103,7 @@ resource "aws_route_table_association" "public_route_2" {
 
 # Create security groups
 resource "aws_security_group" "public_sg" {
-  name        = "public_sg"
+  name        = "public-sg"
   description = "Allow web and ssh traffic"
   vpc_id      = aws_vpc.vpc.id
 
@@ -134,7 +129,7 @@ resource "aws_security_group" "public_sg" {
 }
 
 resource "aws_security_group" "private_sg" {
-  name        = "private_sg"
+  name        = "private-sg"
   description = "Allow web tier and ssh traffic"
   vpc_id      = aws_vpc.vpc.id
 
@@ -196,29 +191,25 @@ resource "aws_instance" "web2" {
     Name = "web2_instance"
   }
 }
-output "ec2_public_ip" {
-  value = aws_instance.web1.public_ip
-}
 
 # Database subnet group
 resource "aws_db_subnet_group" "db_subnet"  {
-    name       = "db_subnet"
+    name       = "db-subnet"
     subnet_ids = [aws_subnet.private_1.id, aws_subnet.private_2.id]
 }
 
 # Create database instance
-resource "aws_db_instance" "db_instance" {
-  allocated_storage    = 10
+resource "aws_db_instance" "project_db" {
+  allocated_storage    = 5
   engine               = "mysql"
   engine_version       = "5.7"
   instance_class       = "db.t3.micro"
+  identifier           = "db-instance"
+  db_name              = "project_db"
   username             = "admin"
   password             = "password"
   db_subnet_group_name = aws_db_subnet_group.db_subnet.id
-  vpc_security_group_ids = [aws_security_group.private_sg.id]
+  vpc_security_group_ids = [aws_security_group.private_sg.id]  
   publicly_accessible = false
   skip_final_snapshot  = true
-  tags = {
-    Name = "project_db"
-  }
 }

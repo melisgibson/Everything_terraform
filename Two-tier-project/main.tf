@@ -191,9 +191,6 @@ resource "aws_instance" "web2" {
     Name = "web2_instance"
   }
 }
-output "ec2_public_ip" {
-  value = aws_instance.web1.public_ip
-}
 
 # Database subnet group
 resource "aws_db_subnet_group" "db_subnet"  {
@@ -215,8 +212,4 @@ resource "aws_db_instance" "project_db" {
   vpc_security_group_ids = [aws_security_group.private_sg.id]  
   publicly_accessible = false
   skip_final_snapshot  = true
-}
-
-output "db_instance_address" {
-    value = aws_db_instance.project_db.address
 }

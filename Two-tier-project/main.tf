@@ -108,10 +108,10 @@ resource "aws_security_group" "public_sg" {
   vpc_id      = aws_vpc.vpc.id
 
   ingress {
-    from_port        = 80
-    to_port          = 80
-    protocol         = "tcp"
-    cidr_blocks      = ["0.0.0.0/0"]
+    from_port       = "80"
+    to_port         = "80"
+    protocol        = "tcp"
+    cidr_blocks       = ["0.0.0.0/0"]
   }
   ingress {
     from_port         = 22
@@ -144,7 +144,7 @@ resource "aws_security_group" "private_sg" {
     from_port         = 22
     to_port           = 22
     protocol          = "tcp"
-    cidr_blocks       = ["0.0.0.0/0"]
+    cidr_blocks       = ["10.0.0.0/16"]
   }
   egress {
     from_port        = 0
@@ -155,13 +155,72 @@ resource "aws_security_group" "private_sg" {
   }
 }
 
+# Security group for ALB
+resource "aws_security_group" "alb_sg" {
+  name        = "alb-sg"
+  description = "security group for alb"
+  vpc_id      = aws_vpc.vpc.id
+
+  ingress {
+    from_port   = "0"
+    to_port     = "0"
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    from_port   = "0"
+    to_port     = "0"
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
 # Create ALB
 resource "aws_lb" "project_alb" {
   name               = "alb"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.public_sg.id]
+  security_groups    = [aws_security_group.alb_sg.id]
   subnets            = [aws_subnet.public_1.id, aws_subnet.public_2.id]
+}
+
+# Create ALB target group
+resource "aws_lb_target_group" "project_tg" {
+  name     = "project-tg"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.vpc.id
+
+  depends_on = [aws_vpc.vpc]
+}
+
+# Create target attachments
+resource "aws_lb_target_group_attachment" "tg_attach1" {
+  target_group_arn = aws_lb_target_group.project_tg.arn
+  target_id        = aws_instance.web1.id
+  port             = 80
+
+  depends_on = [aws_instance.web1]
+}
+
+resource "aws_lb_target_group_attachment" "tg_attach2" {
+  target_group_arn = aws_lb_target_group.project_tg.arn
+  target_id        = aws_instance.web2.id
+  port             = 80
+
+  depends_on = [aws_instance.web2]
+}
+
+# Create listener
+resource "aws_lb_listener" "listener_lb" {
+  load_balancer_arn = aws_lb.project_alb.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.project_tg.arn
+  }
 }
 
 # Create ec2 instances
@@ -173,6 +232,14 @@ resource "aws_instance" "web1" {
   vpc_security_group_ids      = [aws_security_group.public_sg.id]
   subnet_id                   = aws_subnet.public_1.id
   associate_public_ip_address = true
+  user_data = <<-EOF
+        #!/bin/bash
+        yum update -y
+        yum install httpd -y
+        systemctl start httpd
+        systemctl enable httpd
+        echo "<html><body><h1>Hi there</h1></body></html>" > /var/www/html/index.html
+        EOF
 
   tags = {
     Name = "web1_instance"
@@ -186,6 +253,14 @@ resource "aws_instance" "web2" {
   vpc_security_group_ids      = [aws_security_group.public_sg.id]
   subnet_id                   = aws_subnet.public_2.id
   associate_public_ip_address = true
+  user_data = <<-EOF
+        #!/bin/bash
+        yum update -y
+        yum install httpd -y
+        systemctl start httpd
+        systemctl enable httpd
+        echo "<html><body><h1>Hi there :)</h1></body></html>" > /var/www/html/index.html
+        EOF
 
   tags = {
     Name = "web2_instance"

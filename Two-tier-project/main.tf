@@ -22,11 +22,6 @@ resource "aws_vpc" "vpc" {
   }
 }
 
-# Output
-output "show_vpc" {
-  value = aws_vpc.vpc.arn
-}
-
 # Create internet gateway
 resource "aws_internet_gateway" "ig" {
   vpc_id = aws_vpc.vpc.id
@@ -207,18 +202,21 @@ resource "aws_db_subnet_group" "db_subnet"  {
 }
 
 # Create database instance
-resource "aws_db_instance" "db_instance" {
-  allocated_storage    = 10
+resource "aws_db_instance" "project_db" {
+  allocated_storage    = 5
   engine               = "mysql"
   engine_version       = "5.7"
   instance_class       = "db.t3.micro"
+  identifier           = "db-instance"
+  db_name              = "project_db"
   username             = "admin"
   password             = "password"
   db_subnet_group_name = aws_db_subnet_group.db_subnet.id
-  vpc_security_group_ids = [aws_security_group.private_sg.id]
+  vpc_security_group_ids = [aws_security_group.private_sg.id]  
   publicly_accessible = false
   skip_final_snapshot  = true
-  tags = {
-    Name = "project-db"
-  }
+}
+
+output "db_instance_address" {
+    value = aws_db_instance.project_db.address
 }

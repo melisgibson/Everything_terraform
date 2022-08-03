@@ -67,7 +67,7 @@ resource "aws_subnet" "private_1" {
   map_public_ip_on_launch = false
 
   tags = {
-    Name = "private_1"
+    Name = "private-1"
   }
 }
 
@@ -78,7 +78,7 @@ resource "aws_subnet" "private_2" {
   map_public_ip_on_launch = false
 
   tags = {
-    Name = "private_2"
+    Name = "private-2"
   }
 }
 
@@ -108,7 +108,7 @@ resource "aws_route_table_association" "public_route_2" {
 
 # Create security groups
 resource "aws_security_group" "public_sg" {
-  name        = "public_sg"
+  name        = "public-sg"
   description = "Allow web and ssh traffic"
   vpc_id      = aws_vpc.vpc.id
 
@@ -134,7 +134,7 @@ resource "aws_security_group" "public_sg" {
 }
 
 resource "aws_security_group" "private_sg" {
-  name        = "private_sg"
+  name        = "private-sg"
   description = "Allow web tier and ssh traffic"
   vpc_id      = aws_vpc.vpc.id
 
@@ -202,7 +202,7 @@ output "ec2_public_ip" {
 
 # Database subnet group
 resource "aws_db_subnet_group" "db_subnet"  {
-    name       = "db_subnet"
+    name       = "db-subnet"
     subnet_ids = [aws_subnet.private_1.id, aws_subnet.private_2.id]
 }
 
@@ -219,6 +219,6 @@ resource "aws_db_instance" "db_instance" {
   publicly_accessible = false
   skip_final_snapshot  = true
   tags = {
-    Name = "project_db"
+    Name = "project-db"
   }
 }

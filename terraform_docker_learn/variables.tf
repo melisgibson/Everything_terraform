@@ -1,6 +1,10 @@
 variable "ext_port" {
-  type = number
-  default = 1880
+  type = list
+
+validation {
+  condition = max(var.ext_port...) <= 65535 && min(var.ext_port...) > 0
+  error_message = "The external port must be in the vaild port rand 0 - 65535."
+ }
 }
 
 variable "int_port" {
@@ -13,7 +17,6 @@ variable "int_port" {
   }
 }
 
-variable "container_count" {
-  type = number
-  default = 1
+locals {
+  container_count = length(var.ext_port)
 }
